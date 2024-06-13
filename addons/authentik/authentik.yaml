@@ -1,0 +1,32 @@
+global:
+ env: 
+  - name: AUTHENTIK_BOOTSTRAP_PASSWORD
+    value: iamusedbyhumanz
+  - name: AUTHENTIK_BOOTSTRAP_TOKEN
+    value: iamusedbymachinez
+authentik:
+    secret_key: "PleaseGenerateASecureKey"
+    # This sends anonymous usage-data, stack traces on errors and
+    # performance data to sentry.io, and is fully opt-in
+    error_reporting:
+        enabled: true
+    postgresql:
+        password: "ThisIsNotASecurePassword"
+
+server:
+    ingress:
+        # Specify kubernetes ingress controller class name
+        ingressClassName: nginx 
+        enabled: true
+        hosts:
+          - authentik.kreintoconfigs.io
+postgresql:
+    enabled: true
+    auth:
+        password: "ThisIsNotASecurePassword"
+redis:
+    enabled: true
+
+
+client id: v9FoLXqU6FnTP5Fi68BHEh6peua56zuJhKqpKlrT
+clientsecret: hQsbYB4x5hNSJU9vS807DQFBid6h39xlvBXuu5h5oVu8ySPzuXYrAQkYgpO5C1xBJMSFFfIa7Jk3gEzWObSxgJEMNhpUZtomiEYxajjGNhHnl7v0wASm3DDI1fH7SsRl

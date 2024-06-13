@@ -1,0 +1,134 @@
+apiVersion: apiextensions.crossplane.io/v1
+kind: CompositeResourceDefinition
+metadata:
+  name: xvpc.aws.kreintoconfigs.io
+  labels:
+    kreintoconfigs.io/provider: aws
+    awsresourcetype: vpc
+spec:
+  claimNames:
+    kind: VPC
+    plural: vpcs
+  group: aws.kreintoconfigs.io
+  names:
+    kind: XVPC
+    plural: xvpc
+  versions:
+    - name: v1alpha1
+      served: true
+      referenceable: true
+      schema:
+        openAPIV3Schema:
+          type: object
+          properties:
+            spec:
+              type: object
+              properties:
+                parameters:
+                  description: Network Parameters
+                  properties:
+                    id:
+                      type: string
+                      description: ID of this Network that other objects will use to refer to it.
+                    region:
+                      type: string
+                      description: Region is the region you'd like your resource to be created in.
+                      default: us-east-1
+                    deletionPolicy:
+                      description: Delete the external resources when the Claim/XR is deleted. Defaults to Delete
+                      enum:
+                        - Delete
+                        - Orphan
+                      type: string
+                      default: Delete
+                    providerConfigName:
+                      description: Crossplane ProviderConfig to use for provisioning this resources
+                      type: string
+                      default: default
+                    vpcCidrBlock:
+                      type: string
+                      description: CIDR block for the VPC
+                    enablesecondarycidr:
+                      type: boolean
+                      description: enable secondary cidr or not
+                      default: false 
+                    secondaryVpcCidrBlock:
+                      type: string
+                      description: Additional CIDR block for the VPC for eks custom networking
+                      required:
+                        - enablesecondarycidr
+                        - nonroutablesubnets
+                    subnets:
+                      type: array
+                      items:
+                        type: object
+                        properties:
+                          availabilityZone:
+                            type: string
+                          type:
+                            type: string
+                            enum:
+                              - public
+                              - private
+                          cidrBlock:
+                            type: string
+                      description: Subnets to create in the VPC
+                      required:
+                        - availabilityZone
+                        - type
+                        - cidrBlock
+                    nonroutablesubnets:
+                      type: array
+                      items:
+                        type: object
+                        properties:
+                          availabilityZone:
+                            type: string
+                          type:
+                            type: string
+                            enum:
+                              - nrtprivate
+                          cidrBlock:
+                            type: string
+                      description: non routable Subnets to create in the VPC for eks
+                      required:
+                        - availabilityZone
+                        - type
+                        - secondaryVpcCidrBlock
+                    createVpcEndpoints:
+                        type: boolean
+                        description: create vpc endpoints or not
+                        default: false
+                  required:
+                    - deletionPolicy
+                    - providerConfigName
+                    - id
+                    - region
+                    - subnets
+                    - vpcCidrBlock
+                    - enablesecondarycidr
+                    - secondaryVpcCidrBlock
+                  type: object
+              required:
+                - parameters
+            status:
+              type: object
+              properties:
+                vpcId:
+                  type: string
+                subnetIds:
+                  type: array
+                  items:
+                    type: string
+                publicSubnetIds:
+                  type: array
+                  items:
+                    type: string
+                privateSubnetIds:
+                  type: array
+                  items:
+                    type: string
+                nonRoutablePrivateSubnetIds:
+                  type: array
+                  items:
+                    type: string

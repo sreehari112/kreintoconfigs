@@ -1,0 +1,25 @@
+apiVersion: aws.kreintoconfigs.io/v1alpha1
+kind: XIRSA
+metadata:
+  name: configuration-aws-eks-irsa-1
+spec:
+  parameters:
+    id: ravichandra
+    condition: StringEquals
+    policyDocument: |
+      {
+          "Version": "2012-10-17",
+          "Statement": [
+              {
+                  "Action": [
+                      "kms:Decrypt",
+                      "kms:DescribeKey"
+                  ],
+                  "Effect": "Allow",
+                  "Resource": "*"
+              }
+          ]
+      }
+    serviceAccount:
+      name: kustomize-controller
+      namespace: flux-system

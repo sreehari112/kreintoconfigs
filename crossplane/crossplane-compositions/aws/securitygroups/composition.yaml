@@ -1,0 +1,90 @@
+apiVersion: apiextensions.crossplane.io/v1
+kind: Composition
+metadata:
+  name: xsecuritygroups.aws.kreintoconfigs.io
+  labels:
+    kreintoconfigs.io/provider: aws
+    crossplane.io/xrd: xsecuritygroups.aws.kreintoconfigs.io
+    awsresourcetype: securitygroup
+spec:
+  compositeTypeRef:
+    apiVersion: aws.kreintoconfigs.io/v1alpha1
+    kind: XSecurityGroup
+  mode: Pipeline
+  pipeline:
+    - step: go-templating
+      functionRef:
+        name: crossplane-contrib-function-go-templating
+      input:
+        apiVersion: gotemplating.fn.crossplane.io/v1beta1
+        kind: GoTemplate
+        source: Inline
+        inline:
+          template: |
+            {{ $metadata := .observed.composite.resource.metadata }}
+            {{ $spec := .observed.composite.resource.spec }}
+            ---
+            apiVersion: ec2.aws.upbound.io/v1beta1
+            kind: SecurityGroup
+            metadata:
+              name: {{ $metadata.name }}
+              annotations:
+                gotemplating.fn.crossplane.io/composition-resource-name: securitygroup
+            spec:
+              deletionPolicy: {{ $spec.parameters.deletionPolicy | default "Delete" }}
+              forProvider:
+                name: {{ $metadata.name }}
+                region: {{ $spec.parameters.region }}
+                vpcIdSelector:
+                  matchLabels:
+                    networks.aws.platform.upbound.io/network-id: {{ $spec.parameters.id }}
+              providerConfigRef:
+                name: {{ $spec.parameters.providerConfigName }}
+            {{- range $i, $rule := $spec.parameters.sgrules }}
+            {{ $cidr := $rule.cidrBlocks }}
+            {{- if not $cidr }}
+              {{ $cidr = list "" }}
+            {{- end }}
+            {{- range $j, $cidrBlock := $cidr }}
+            ---
+            apiVersion: ec2.aws.upbound.io/v1beta1
+            {{- if or (eq $rule.type "ingress") (eq $rule.type "egress") }}
+            kind: SecurityGroup{{ title $rule.type }}Rule
+            {{- end }}
+            metadata:
+              annotations:
+                gotemplating.fn.crossplane.io/composition-resource-name: sgrule-{{ $i }}{{ $cidrBlock | replace "." "-" | replace "/" "-" }}
+            spec:
+              deletionPolicy: {{ $spec.parameters.deletionPolicy | default "Delete" }}
+              forProvider:
+                {{- if $cidrBlock }}
+                cidrIpv4: {{ $cidrBlock }}
+                {{- end }}
+                region: {{ $spec.parameters.region }}
+                securityGroupIdSelector:
+                  matchControllerRef: true
+                {{- if $rule.fromPort }}
+                fromPort: {{ $rule.fromPort }}
+                {{- end }}
+                {{- if $rule.toPort }}
+                toPort: {{ $rule.toPort }}
+                {{- end }}
+                description: {{ $rule.description }}
+                ipProtocol: '{{ $rule.protocol }}'
+                {{- if $rule.isSelf }}
+                referencedSecurityGroupIdSelector:
+                  matchControllerRef: true
+                {{- end }}
+                {{- if $rule.sourceSecurityGroupName }}
+                referencedSecurityGroupIdRef:
+                  name: {{ $rule.sourceSecurityGroupName }}
+                {{- end }}
+              {{- if $spec.parameters.providerConfigName }}
+              providerConfigRef:
+                name: {{ $spec.parameters.providerConfigName }}
+              {{- end }}
+            {{- end }}
+            {{- end }}
+    - step: automatically-detect-ready-composed-resources
+      functionRef:
+        name: crossplane-contrib-function-auto-ready

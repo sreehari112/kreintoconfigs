@@ -1,0 +1,99 @@
+apiVersion: apiextensions.crossplane.io/v1
+kind: CompositeResourceDefinition
+metadata:
+  name: xsecuritygroups.aws.kreintoconfigs.io
+  labels:
+    kreintoconfigs.io/provider: aws
+    awsresourcetype: securitygroup
+spec:
+  group: aws.kreintoconfigs.io
+  names:
+    kind: XSecurityGroup
+    plural: xsecuritygroups
+  claimNames:
+    kind: SecurityGroup
+    plural: securitygroups
+  versions:
+    - name: v1alpha1
+      served: true
+      referenceable: true
+      schema:
+        openAPIV3Schema:
+          type: object
+          properties:
+            spec:
+              type: object
+              properties:
+                parameters:
+                  type: object
+                  description: Parameters used to customize the cluster
+                  properties:
+                    id:
+                      type: string
+                      description: ID of this Network that other objects will use to refer to it.
+                    region:
+                      type: string
+                      description: Region is the region you'd like your resource to be created in.
+                    deletionPolicy:
+                      description: Delete the external resources when the Claim/XR is deleted. Defaults to Delete
+                      enum:
+                        - Delete
+                        - Orphan
+                      type: string
+                      default: Delete
+                    providerConfigName:
+                      description: Crossplane ProviderConfig to use for provisioning this resources
+                      type: string
+                      default: default
+                    rules:
+                      type: array
+                      items:
+                        type: object
+                        x-kubernetes-validations:
+                          - rule: "!(has(self.cidrBlocks) && has(self.sourceSecurityGroupName))"
+                            message: "cidrBlocks cannot be set together with sourceSecurityGroupName."
+                          - rule: "!(has(self.fromPort) && has(self.toPort)) || (has(self.cidrBlocks) || has(self.sourceSecurityGroupName))"
+                            message: "When fromPort and toPort are specified, either cidrBlocks or sourceSecurityGroupName must be set."
+                          - rule: "!has(self.isSelf) || (self.isSelf == false || (!has(self.cidrBlocks) && !has(self.sourceSecurityGroupName)))"
+                            message: "When isSelf is true, neither cidrBlocks nor sourceSecurityGroupName can be specified."
+                          - rule: "!(self.protocol == '-1' && (has(self.fromPort) || has(self.toPort)))"
+                            message: "When protocol is -1, toPort and fromPort cannot be set."
+                        properties:
+                          type:
+                            type: string
+                            description: Type of rule, ingress (inbound) or egress (outbound)..
+                            enum:
+                              - ingress
+                              - egress
+                          fromPort:
+                            type: integer
+                          toPort:
+                            type: integer
+                          description:
+                            type: string
+                            default: Crossplane generated Security Group Rule
+                          protocol:
+                            type: string
+                          sourceSecurityGroupName:
+                            type: string
+                            description: Reference to a SecurityGroup to populate sourceSecurityGroupName
+                          cidrBlocks:
+                            type: array
+                            description: Array List of CIDR blocks (optional).
+                            items:
+                              type: string
+                          isSelf:
+                            type: boolean
+                            description: Whether the security group itself will be added as a source to this ingress rule.
+                        required:
+                          - type
+                          - description
+                          - protocol
+                  required:
+                    - deletionPolicy
+                    - providerConfigName
+                    - id
+                    - region
+                    - rules
+              required:
+                - parameters

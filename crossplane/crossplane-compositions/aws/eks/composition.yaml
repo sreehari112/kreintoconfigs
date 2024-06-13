@@ -1,0 +1,211 @@
+apiVersion: apiextensions.crossplane.io/v1
+kind: Composition
+metadata:
+  name: xeks.aws.kreintoconfigs.io
+  labels:
+    kreintoconfigs.io/provider: aws
+    crossplane.io/xrd: xeks.aws.kreintoconfigs.io
+    awsresourcetype: eks
+spec:
+  compositeTypeRef:
+    apiVersion: aws.kreintoconfigs.io/v1alpha1
+    kind: XEKS
+  mode: Pipeline
+  pipeline:
+    - step: render-templates
+      functionRef:
+        name: crossplane-contrib-function-go-templating
+      input:
+        apiVersion: gotemplating.fn.crossplane.io/v1beta1
+        kind: GoTemplate
+        source: Inline
+        inline:
+          template: |
+            {{ $params := .observed.composite.resource.spec.parameters }}
+            ---
+            apiVersion: iam.aws.upbound.io/v1beta1
+            kind: Role
+            metadata:
+              labels:
+                role: controlplane
+                awsresourcetype: iamrole
+              annotations: 
+                gotemplating.fn.crossplane.io/composition-resource-name: iamrole
+            spec:
+              forProvider:
+                assumeRolePolicy: |
+                  {
+                    "Version": "2012-10-17",
+                    "Statement": [
+                        {
+                            "Effect": "Allow",
+                            "Principal": {
+                                "Service": [
+                                    "eks.amazonaws.com"
+                                ]
+                            },
+                            "Action": [
+                                "sts:AssumeRole"
+                            ]
+                        }
+                    ]
+                  }
+                providerConfigRef:
+                  name: {{ $params.providerConfigName }}
+                deletionPolicy: {{ $params.deletionPolicy }}
+            ---
+            apiVersion: iam.aws.upbound.io/v1beta1
+            kind: RolePolicyAttachment
+            metadata:
+              labels:
+                awsresourcetype: iampolicyattachment
+              annotations: 
+                gotemplating.fn.crossplane.io/composition-resource-name: iampolicyattachment
+            spec:
+              forProvider:
+                policyArn: arn:aws:iam::aws:policy/AmazonEKSClusterPolicy
+                roleSelector:
+                  matchControllerRef: true
+                  matchLabels:
+                    role: controlplane
+                providerConfigRef:
+                  name: {{ $params.providerConfigName }}
+                deletionPolicy: {{ $params.deletionPolicy }}
+            ---
+            apiVersion: eks.aws.upbound.io/v1beta1
+            kind: Cluster
+            metadata:
+              labels:
+                role: controlplane
+                awsresourcetype: ekscluster
+              annotations: 
+                gotemplating.fn.crossplane.io/composition-resource-name: ekscluster
+            spec:
+              forProvider:
+                roleArnSelector:
+                  matchControllerRef: true
+                  matchLabels:
+                    role: controlplane
+                vpcConfig:
+                  {{- if eq $params.endpointPrivateAccess true}}
+                  endpointPrivateAccess: true
+                  {{- else }}
+                  endpointPrivateAccess: false
+                  {{- end }}
+                  {{- if eq $params.endpointPublicAccess true}}
+                  endpointPublicAccess: true
+                  {{- else }}
+                  endpointPublicAccess: true
+                  {{- end }}
+                  subnetIdSelector:
+                    matchLabels:
+                      access: public
+                version: {{ $params.version }}
+                region: {{ $params.region }}
+                subnetIdSelector:
+                  matchLabels:
+                    networks.aws.platform.upbound.io/network-id: {{ $params.id }}
+              providerConfigRef:
+                name: {{ $params.providerConfigName }}
+              deletionPolicy: {{ $params.deletionPolicy }}
+            ---
+            apiVersion: ec2.aws.upbound.io/v1beta1
+            kind: SecurityGroup
+            metadata:
+              labels:
+                role: controlplane
+                awsresourcetype: ekscluster
+              annotations:
+                crossplane.io/external-name: {{ .status.eks.clusterSecurityGroupId }}
+                gotemplating.fn.crossplane.io/composition-resource-name: ekscluster
+            spec:
+              forProvider:
+                tags:
+                  eks.aws.platform.upbound.io/discovery: {{ $params.id }}
+                region: {{ $params.region }}
+              providerConfigRef:
+                name: {{ $params.providerConfigName }}
+              deletionPolicy: {{ $params.deletionPolicy }}
+            ---
+            apiVersion: eks.aws.upbound.io/v1beta1 
+            kind: ClusterAuth
+            metadata:
+              labels:
+                awsresourcetype: eksclusterauth
+              annotations:
+                gotemplating.fn.crossplane.io/composition-resource-name: eksclusterauth
+            spec:
+              forProvider:
+                clusterNameSelector:
+                  matchControllerRef: true
+              providerConfigRef:
+                name: {{ $params.providerConfigName }}
+              deletionPolicy: {{ .$params.deletionPolicy }}
+              region: {{ $params.region }}
+              writeConnectionSecretToRef:
+                namespace: {{ .spec.writeConnectionSecretToRef.namespace }}
+                name: {{ .metadata.uid }}-ekscluster
+            connectionDetails:
+              - fromConnectionSecretKey: kubeconfig
+                name: kubeconfig
+                type: FromConnectionSecretKey
+            ---
+            apiVersion: iam.aws.upbound.io/v1beta1
+            kind: Role
+            metadata:
+              labels:
+                role: nodegroup
+                awsresourcetype: iamrole
+              annotations:
+                gotemplating.fn.crossplane.io/composition-resource-name: iamrole
+            spec:
+              forProvider:
+                assumeRolePolicy: |
+                  {
+                    "Version": "2012-10-17",
+                    "Statement": [
+                      {
+                        "Effect": "Allow",
+                        "Principal": {
+                          "Service": [
+                            "ec2.amazonaws.com"
+                          ]
+                        },
+                        "Action": "sts:AssumeRole"
+                      }
+                    ]
+                  }
+                policyAttachment:
+                  - arn: arn:aws:iam::aws:policy/AmazonEKSWorkerNodePolicy
+                  - arn: arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly     
+                  - arn:aws:iam::aws:policy/AmazonEKS_CNI_Policy
+                  - arn:aws:iam::aws:policy/service-role/AmazonEBSCSIDriverPolicy            
+              providerConfigRef:
+                name: {{ $params.providerConfigName }}
+              deletionPolicy: {{ $params.deletionPolicy }}
+            ---
+            apiVersion: eks.aws.upbound.io/v1beta1
+            kind: NodeGroup
+            spec:
+              forProvider:
+                clusterNameSelector:
+                  matchControllerRef: true
+                instanceTypes:
+                  - {{ $params.nodes.instanceType }}
+                nodeRoleArnSelector:
+                  matchControllerRef: true
+                  matchLabels:
+                    role: nodegroup
+                scalingConfig:
+                  desiredSize: {{ $params.nodes.count }}
+                  maxSize: {{ $params.nodes.maxSize }}
+                  minSize: {{ $params.nodes.minSize }}
+                region: {{ $params.region }}
+                subnetIdSelector:
+                  matchLabels:
+                    networks.aws.platform.upbound.io/network-id: {{ $params.id }}
+                    access: private
+              providerConfigRef:
+                name: {{ $params.providerConfigName }}
+              deletionPolicy: {{ .spec.parameters.deletionPolicy }}
+            ---

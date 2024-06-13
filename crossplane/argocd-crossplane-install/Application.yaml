@@ -1,0 +1,105 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: crossplane-system
+spec:
+  destination:
+    name: ''
+    namespace: crossplane-system
+    server: 'https://kubernetes.default.svc'
+  source:
+    path: ''
+    repoURL: 'https://charts.crossplane.io/stable'
+    targetRevision: 1.16.0
+    chart: crossplane
+    helm:
+      values: >-  
+        # -- The number of Crossplane pod `replicas` to deploy.
+        replicas: 2
+        # -- The deployment strategy for the Crossplane and RBAC Manager pods.
+        deploymentStrategy: RollingUpdate
+        image:
+          # -- Repository for the Crossplane pod image.
+          repository: xpkg.upbound.io/crossplane/crossplane
+          # -- The Crossplane image tag. Defaults to the value of `appVersion` in `Chart.yaml`.
+          tag: "v1.16.0"
+          # -- The image pull policy used for Crossplane and RBAC Manager pods.
+          pullPolicy: Always
+
+        # -- Enable `hostNetwork` for the Crossplane deployment. Caution:
+        enabling `hostNetwork` grants the Crossplane Pod access to the host
+        network namespace. Consider setting `dnsPolicy` to
+        `ClusterFirstWithHostNet`.
+        hostNetwork: false
+        # -- Enable [leader
+        election](https://docs.crossplane.io/latest/concepts/pods/#leader-election)
+        for the Crossplane pod.
+        leaderElection: true
+        webhooks:
+          # -- Enable webhooks for Crossplane and installed Provider packages.
+          enabled: true
+        rbacManager:
+          # -- Deploy the RBAC Manager pod and its required roles.
+          deploy: true
+          # -- Don't install aggregated Crossplane ClusterRoles.
+          skipAggregatedClusterRoles: false
+          # -- The number of RBAC Manager pod `replicas` to deploy.
+          replicas: 1
+          # -- Enable [leader election](https://docs.crossplane.io/latest/concepts/pods/#leader-election) for the RBAC Manager pod.
+          leaderElection: true
+
+        resourcesCrossplane:
+          limits:
+            # -- CPU resource limits for the Crossplane pod.
+            cpu: 500m
+            # -- Memory resource limits for the Crossplane pod.
+            memory: 1024Mi
+          requests:
+            # -- CPU resource requests for the Crossplane pod.
+            cpu: 100m
+            # -- Memory resource requests for the Crossplane pod.
+            memory: 256Mi
+
+        provider:
+          # -- A list of provider packages to install
+          packages:
+            - xpkg.upbound.io/upbound/provider-aws-ec2:v1.5.0
+            - xpkg.upbound.io/upbound/provider-aws-eks:v1.5.0
+            - xpkg.upbound.io/upbound/provider-aws-iam:v1.5.0
+            - xpkg.upbound.io/upbound/provider-aws-route53:v1.5.0
+            - xpkg.upbound.io/upbound/provider-aws-s3:v1.5.0
+
+        function:
+          # -- A list of Function packages to install
+          packages:
+             - xpkg.upbound.io/crossplane-contrib/function-auto-ready:v0.2.1
+             - xpkg.upbound.io/crossplane-contrib/function-go-templating:v0.4.1
+             - xpkg.upbound.io/crossplane-contrib/function-patch-and-transform:v0.5.0
+
+        resourcesRBACManager:
+          limits:
+            # -- CPU resource limits for the RBAC Manager pod.
+            cpu: 100m
+            # -- Memory resource limits for the RBAC Manager pod.
+            memory: 512Mi
+          requests:
+            # -- CPU resource requests for the RBAC Manager pod.
+            cpu: 100m
+            # -- Memory resource requests for the RBAC Manager pod.
+            memory: 256Mi
+
+        securityContextRBACManager:
+          # -- The user ID used by the RBAC Manager pod.
+          runAsUser: 65532
+          # -- The group ID used by the RBAC Manager pod.
+          runAsGroup: 65532
+          # -- Enable `allowPrivilegeEscalation` for the RBAC Manager pod.
+          allowPrivilegeEscalation: false
+          # -- Set the RBAC Manager pod root file system as read-only.
+          readOnlyRootFilesystem: true
+
+        metrics:
+          # -- Enable Prometheus path, port and scrape annotations and expose port 8080 for both the Crossplane and RBAC Manager pods.
+          enabled: true
+  sources: []
+  project: default

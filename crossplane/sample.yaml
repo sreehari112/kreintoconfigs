@@ -1,0 +1,12 @@
+apiVersion: iam.aws.upbound.io/v1beta1
+kind: Role
+metadata:
+  labels:
+    awsresourcetype: iamrole
+  annotations: 
+    gotemplating.fn.crossplane.io/composition-resource-name: iamrole
+spec:
+  forProvider:
+    providerConfigRef:
+      name: {{ $params.providerConfigName }}
+    deletionPolicy: {{ $params.deletionPolicy }}

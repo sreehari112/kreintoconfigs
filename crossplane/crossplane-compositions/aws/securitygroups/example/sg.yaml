@@ -1,0 +1,49 @@
+---
+apiVersion: aws.kreintoconfigs.io/v1alpha1
+kind: XSecurityGroup
+metadata:
+  name: eks-nodegroup
+spec:
+  parameters:
+    region: us-west-2
+    id: configuration-aws-securitygroup
+    sgrules:
+      - type: ingress
+        isSelf: true
+        protocol: "-1"
+        description: Allow All Traffic eks-nodegroup SG
+      - type: ingress
+        fromPort: 10250
+        toPort: 10250
+        description: Allow Traffic from eks-controlplane SG
+        sourceSecurityGroupName: eks-controlplane
+        protocol: tcp
+      - type: ingress
+        fromPort: 11520
+        toPort: 11520
+        description: Allow Traffic from eks-controlplane SG
+        sourceSecurityGroupName: eks-controlplane
+        protocol: tcp
+      - type: ingress
+        fromPort: 9443
+        toPort: 9443
+        description: Allow Traffic for Webhooks from eks-controlplane SG
+        sourceSecurityGroupName: eks-controlplane
+        protocol: tcp
+      - type: ingress
+        fromPort: 8443
+        toPort: 8443
+        description: Allow Traffic for Webhooks from eks-controlplane SG
+        sourceSecurityGroupName: eks-controlplane
+        protocol: tcp
+      - type: ingress
+        fromPort: 443
+        toPort: 443
+        description: Allow Traffic for Webhooks from eks-controlplane SG
+        sourceSecurityGroupName: eks-controlplane
+        protocol: tcp
+      - type: egress
+        cidrBlocks:
+          - 0.0.0.0/0
+        description: Allow All Traffic Outbound
+        protocol: "-1"

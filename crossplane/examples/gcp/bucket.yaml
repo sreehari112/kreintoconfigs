@@ -1,0 +1,32 @@
+apiVersion: storage.gcp.upbound.io/v1beta1
+kind: Bucket
+metadata:
+  annotations:
+    meta.upbound.io/example-id: storage/v1beta1/notification
+  labels:
+    testing.upbound.io/example-name: bucket
+  name: bucket-ravichandrapatel
+spec:
+  forProvider:
+    location: US
+    forceDestroy: true
+  providerConfigRef:
+    name: crossplane-provider-gcp
+---
+apiVersion: storage.gcp.upbound.io/v1beta1
+kind: BucketACL
+metadata:
+  annotations:
+    meta.upbound.io/example-id: storage/v1beta1/bucketacl
+  labels:
+    testing.upbound.io/example-name: bucket-acl
+  name: bucket-acl
+spec:
+  forProvider:
+    bucketSelector:
+      matchLabels:
+        testing.upbound.io/example-name: bucket
+    roleEntity:
+      - READER:allAuthenticatedUsers
+  providerConfigRef:
+    name: crossplane-provider-gcp
