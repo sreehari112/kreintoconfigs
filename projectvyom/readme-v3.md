@@ -41,7 +41,7 @@ Vyom's architecture consists of three core components:
 3. **API & Reporting Layer:**
     *  **RESTful API:** Exposes a user-friendly API for retrieving real-time recommendations for specific services, allowing easy integration with other tools and automation workflows.
     *  **Excel Reporting Engine:** Generates comprehensive reports containing detailed information: service name, current resource allocation, recommended allocation (CPU & Memory), recommendation type used, lookback period, buffer percentage, etc., for informed decision-making.
-![Alt text](arche.png)
+
 ```mermaid
 graph LR
 subgraph "Data Ingestion Layer"
@@ -150,23 +150,3 @@ Override global settings at the service level within the configuration file if n
 
 Project Vyom empowers you to take a data-driven approach to Kubernetes resource management, driving cost savings, performance optimization, and operational efficiency. By integrating Vyom into your workflow, you can establish a more robust and resilient Kubernetes environment.
 
-
-```mermaid
-graph LR
-subgraph "Data Ingestion Layer"
-Prometheus["Prometheus<br>(Metrics Source)"] --> Data{Data Processing}
-Datadog["Datadog<br>(Metrics Source)"] --> Data
-end
-subgraph "Recommendation Engine"
-Data --> Analysis{Historical Analysis &<br> Percentile Calculation}
-Analysis --> Buffer{Buffer Application}
-Buffer --> Recommendation{"Recommendation Generation<br>(CPU & Memory)"}
-end
-subgraph "API & Reporting Layer"
-Recommendation --> API["RESTful API<br>(/recommendations)"]
-Recommendation --> Report{"Excel Reporting<br>(Scheduled Generation)"}
-end
-Configuration{"Global & Service-Specific<br>Configuration (YAML/JSON)"} --> Recommendation
-API --> Users["Users & Automation Tools"]
-Report --> Users
-```
