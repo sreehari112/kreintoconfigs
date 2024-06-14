@@ -1,0 +1,39 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: vault
+spec:
+  destination:
+    name: ''
+    namespace: vault
+    server: 'https://kubernetes.default.svc'
+  source:
+    path: ''
+    repoURL: 'https://helm.releases.hashicorp.com'
+    targetRevision: 0.28.0
+    chart: vault
+    helm:
+      values: |-
+        server:
+          affinity: ""
+          ha:
+            enabled: true
+            raft: 
+              enabled: true
+        ui:
+         enabled: true
+         serviceType: "ClusterIP"
+  sources: []
+  project: vault
+  syncPolicy:
+    automated:
+      prune: false
+      selfHeal: false
+    syncOptions:
+      - CreateNamespace=true
+      - RespectIgnoreDifferences=true
+  ignoreDifferences:
+    - group: admissionregistration.k8s.io
+      kind: MutatingWebhookConfiguration
+      jqPathExpressions:
+        - '.webhooks[]?.clientConfig.caBundle'

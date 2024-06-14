@@ -43,6 +43,6 @@ spec:
     #     type: nrtprivate
     #     cidrBlock: 100.99.128.0/18
     #   - availabilityZone: us-east-1c
-    #     type: nrtprivate
+    #     type: nrtprivatea
     #     cidrBlock: 100.99.192.0/18
     providerConfigName: aws-provider-config
