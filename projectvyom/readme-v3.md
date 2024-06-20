@@ -24,6 +24,7 @@
 * **Blue-Green Deployment Awareness:** Ensure consistent recommendations across blue-green deployments for seamless updates without performance degradation.
 * **Centralized Configuration:** Manage all parameters globally at a service level, allowing for fine-tuning and customized resource management strategies.
 * **Actionable Reporting:** Generate comprehensive reports in Excel format, providing insights into historical usage, recommendations, and configuration parameters for easy analysis, sharing, and decision-making.
+* **Grafana Dashboard:** Create a comprehensive dashboard for visualizing the metrics after the recommendation calculations.
 
 ### 4. System Architecture
 
